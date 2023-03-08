@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<head>
+    <script src="https://code.jquery.com/jquery-3.6.4.js" type="text/javascript"> </script>
+
+</head>
+  
+<body>
+    <center>
+    <video id="video" width="auto" height="auto" autoplay> </video>
+    </center>
+    <script>
+	 var stop = function() {
+	     var stream = video.srcObject;
+	     var tracks = stream.getTracks();
+	     for (var i = 0; i < tracks.length; i++) {
+		 var track = tracks[i];
+		 track.stop();
+	     }
+	     video.srcObject = null;
+	 }
+	 var start = function() {
+	     var video = document.getElementById('video'),
+		 vendorUrl = window.URL || window.webkitURL;
+	     if (navigator.mediaDevices.getUserMedia) {
+		 navigator.mediaDevices.getUserMedia({
+		         video: true,
+		         width: {
+		             min: 1920,
+		             max: 1920
+		         },
+		         height: {
+		             min: 1080,
+		             max: 1080
+		         }
+		     })
+		     .then(function(stream) {
+		         video.srcObject = stream;
+		     }).catch(function(error) {
+		         console.log("Something went wrong!");
+		     });
+	     }
+	 }
+	 $(function() {
+	     start();
+	 });
+	 window.addEventListener('resize', resize, false);
+
+	 video.height = 100; /* to get an initial width to work with*/
+	 resize();
+
+	 var elem = document.getElementById("video");
+	 if (elem.requestFullscreen) {
+	     elem.requestFullscreen();
+	 } else if (elem.mozRequestFullScreen) {
+	     elem.mozRequestFullScreen();
+	 } else if (elem.webkitRequestFullscreen) {
+	     elem.webkitRequestFullscreen();
+	 } else if (elem.msRequestFullscreen) {
+	     elem.msRequestFullscreen();
+	 }
+
+	 function resize() {
+	     videoRatio = video.height / video.width;
+	     windowRatio = window.innerHeight / window.innerWidth; /* browser size */
+
+	     if (windowRatio < videoRatio) {
+		 if (window.innerHeight > 50) { /* smallest video height */
+		     video.height = window.innerHeight;
+		 } else {
+		     video.height = 50;
+		 }
+	     } else {
+		 video.width = window.innerWidth;
+	     }
+
+	 };
+    </script>
+        <style>
+      body {
+          background: black;
+          padding: 0px;
+          margin: 0px;
+      }
+    </style>
+</body>
+  
+</html>

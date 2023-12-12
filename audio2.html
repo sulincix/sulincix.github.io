@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Audio Example</title>
+</head>
+<body>
+    <h1>WebRTC Audio Example</h1>
+    <audio id="remoteAudio" autoplay></audio>
+    <button onclick="startCall()">Start Call</button>
+    <button onclick="endCall()">End Call</button>
+
+    <script >
+    const configuration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let peerConnection;
+let localStream;
+let remoteStream;
+let isCaller = false;
+
+// Function to set up the local media stream
+async function setupMediaStream() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        document.getElementById("remoteAudio").srcObject = localStream;
+    } catch (error) {
+        console.error("Error accessing microphone:", error);
+    }
+}
+
+// Function to create and set up a peer connection
+function createPeerConnection() {
+    peerConnection = new RTCPeerConnection(configuration);
+
+    // Add local stream to peer connection
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+    });
+
+    // Set up event handlers for the peer connection
+    peerConnection.onicecandidate = handleICECandidate;
+    peerConnection.ontrack = handleTrack;
+
+    if (isCaller) {
+        // If the user is the caller, create an offer
+        createOffer();
+    }
+}
+
+// Function to create and send an offer
+async function createOffer() {
+    try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        // Send the offer to the other peer (via signaling server)
+        // In a real-world scenario, you'd use a signaling server for this
+        // For simplicity, we'll assume a signaling server is handling this step
+        console.log("Send this offer to the other peer:", offer);
+    } catch (error) {
+        console.error("Error creating offer:", error);
+    }
+}
+
+// Function to handle the ICE candidate event
+function handleICECandidate(event) {
+    if (event.candidate) {
+        // Send the candidate to the other peer (via signaling server)
+        // In a real-world scenario, you'd use a signaling server for this
+        // For simplicity, we'll assume a signaling server is handling this step
+        console.log("Send this ICE candidate to the other peer:", event.candidate);
+    }
+}
+
+// Function to handle the incoming audio stream
+function handleTrack(event) {
+    remoteStream = event.streams[0];
+    document.getElementById("remoteAudio").srcObject = remoteStream;
+}
+
+// Function to start the call
+function startCall() {
+    isCaller = true;
+    setupMediaStream();
+    createPeerConnection();
+}
+
+// Function to end the call
+function endCall() {
+    if (peerConnection) {
+        peerConnection.close();
+    }
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    document.getElementById("remoteAudio").srcObject = null;
+}
+
+    </script>
+</body>
+</html>
+

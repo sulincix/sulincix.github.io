@@ -1,0 +1,18 @@
+<html>
+<body>
+<script>
+const el = document.createElement("textarea");
+document.body.appendChild(el);
+el.style.fontFamily = "monospace";
+el.style.width = "100%";
+el.style.height = "100%";
+el.style.resize = "none";
+
+el.value = localStorage.getItem("textareaContent");
+
+el.addEventListener("change", function() {
+    localStorage.setItem("textareaContent", el.value);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<html>
+<body>
+    <style>
+    * > * {
+        padding: 0px;
+        margin: 0px;
+    }
+    </style>
+    <script>
+        document.write("<object>");
+        const game = decodeURIComponent(document.URL.split("?")[1]);
+        document.write("<embed id=\"game\" src=\""+ game+"\" />");
+        document.write("</object>");
+
+        function resizeGame() {
+            const element = document.getElementById('game');
+            element.style.width = window.innerWidth + 'px';
+            element.style.height = window.innerHeight + 'px';
+        }
+        window.addEventListener('resize', resizeGame);
+        resizeGame();
+    </script>
+
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+</body>
+</html>

@@ -32,8 +32,9 @@ function isApple() {
 }
 
 if(isApple()){
-    document.body.innerHTML = "<h1 style='color:white;'>Apple Devices Are Not Allowed!</h1>"
-    document.body.innerHTML += "<p style='color:white;'>Get a real device: use Android or GNU/Linux!</p>";
+    document.head.innerHTML = "";
+    document.body.innerHTML = "<h1 style='color:black;'>Apple Devices Are Not Allowed!</h1>";
+    document.body.innerHTML += "<p style='color:black;'>Get a real device: use Android or GNU/Linux!</p>";
     throw new Error("Apple Detected!");
 }
     </script>

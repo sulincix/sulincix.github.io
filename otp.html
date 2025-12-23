@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sulincix OTP Generator</title>
+    <style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+h2 {
+    color: #007BFF;
+    margin: 20px 0;
+}
+
+#totp {
+    font-weight: bold;
+    font-size: 2em;
+}
+
+input {
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 250px;
+    transition: border-color 0.3s;
+}
+
+input:focus {
+    border-color: #007BFF;
+    outline: none;
+}
+
+#time-left {
+    font-size: 1.5em;
+    color: #28a745;
+    margin: 10px;
+}
+
+footer {
+    position: absolute;
+    bottom: 20px;
+    color: #666;
+}
+
+@media (max-width: 500px) {
+    h1 {
+        font-size: 1.5em;
+    }
+
+    #totp {
+        font-size: 1.5em;
+    }
+
+    input {
+        width: 80%;
+    }
+}
+    </style>
+</head>
+<body>
+    <header>
+        <h1>OTP Generator</h1>
+    </header>
+
+    <main>
+        <section>
+            <h2><center id="totp">Loading...</center></h2>
+            <div class="input-container">
+                <label for="secret">Enter Secret:</label>
+                <br>
+                <input type="text" id="secret" placeholder="Enter Secret" aria-label="Secret" />
+                <p>
+                <label for="digits">Digits:</label>
+                <br>
+                <input type="number" id="digits" placeholder="Digits" min="6" value="6" aria-label="Number of Digits" />
+                <br>
+                <label for="period">Period (seconds):</label>
+                <br>
+                <input type="number" id="period" placeholder="Period (seconds)" min="1" value="30" aria-label="Period in seconds" />
+                </p>
+                <button id="generate-token">Generate Random Token</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        &copy; <a href="https://gitlab.com/sulincix">sulincix</a>
+    </footer>
+
+    <script>
+// Function to generate a random token
+function generateRandomToken(length) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        token += characters[randomIndex];
+    }
+    return token;
+}
+
+// Adding event listener to the button
+document.getElementById("generate-token").addEventListener("click", function() {
+    const tokenLength = 16; // Set your desired token length
+    const randomToken = generateRandomToken(tokenLength); // Generate the token
+    document.getElementById("secret").value = randomToken; // Set the token to the secret input
+    updateURL();
+});
+
+function updateURL() {
+        const secret = document.getElementById('secret').value;
+        const digits = document.getElementById('digits').value;
+        const period = document.getElementById('period').value;
+        const url = new URL(window.location);
+        url.searchParams.set('secret', secret);
+        url.searchParams.set('digits', digits);
+        url.searchParams.set('period', period);
+        window.history.replaceState({}, '', url);
+    }
+
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    function base32Decode(base32) {
+        const base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567=";
+        let bits = '';
+        base32.split('').forEach(char => {
+            const byte = base32Chars.indexOf(char);
+            if (byte >= 0) {
+                for (let i = 4; i >= 0; i--) {
+                    bits += (byte >> i) & 1;
+                }
+            }
+        });
+        let bytes = [];
+        for (let i = 0; i < bits.length; i += 8) {
+            if (bits.substr(i, 8).length === 8) {
+                bytes.push(parseInt(bits.substr(i, 8), 2));
+            }
+        }
+        return new Uint8Array(bytes);
+    }
+
+    async function hmacSha1(key, data) {
+        const algo = window.crypto.subtle;
+        const signature = await algo.sign('HMAC', key, data);
+        return new Uint8Array(signature);
+    }
+
+    async function generateTOTP(decodedSecret, digits, period) {
+        let time = Math.floor(Date.now() / 1000 / period);
+        const timeBuffer = new Uint8Array(8);
+        for (let i = 7; i >= 0; i--) {
+            timeBuffer[i] = time & 0xFF;
+            time >>= 8;
+        }
+
+        const key = await window.crypto.subtle.importKey(
+            'raw',
+            decodedSecret,
+            { name: 'HMAC', hash: 'SHA-1' },
+            false,
+            ['sign']
+        );
+
+        const signature = await hmacSha1(key, timeBuffer);
+        const offset = signature[signature.length - 1] & 0x0F;
+        const code = ((signature[offset] & 0x7F) << 24) |
+                     ((signature[offset + 1] & 0xFF) << 16) |
+                     ((signature[offset + 2] & 0xFF) << 8) |
+                     (signature[offset + 3] & 0xFF);
+
+        return (code % Math.pow(10, digits)).toString().padStart(digits, '0');
+    }
+
+    async function updateOTP(){
+        const secret = getQueryParam('secret') || '';
+        const digits = getQueryParam('digits') || 6;
+        const period = getQueryParam('period') || 30;
+
+
+        const decodedSecret = base32Decode(secret);
+        const totp = await generateTOTP(decodedSecret, digits, period);
+        document.getElementById('totp').innerText = totp;
+        updateURL();
+    }
+
+    async function startTOTP() {
+        const secret = getQueryParam('secret') || '';
+        const digits = getQueryParam('digits') || 6;
+        const period = getQueryParam('period') || 30;
+        document.getElementById('secret').value = secret;
+        document.getElementById('digits').value = digits;
+        document.getElementById('period').value = period;
+        const interval = setInterval(async () => {
+                updateOTP();
+            }, 1000);
+            updateOTP();
+        }
+
+        // Event listener for input changes to update URL
+        document.getElementById('secret').addEventListener('input', updateOTP);
+        document.getElementById('digits').addEventListener('input', updateOTP);
+        document.getElementById('period').addEventListener('input', updateOTP);
+
+        startTOTP(); // Start TOTP generation
+    </script>
+</body>
+</html>

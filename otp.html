@@ -209,6 +209,10 @@ function updateURL() {
         document.getElementById('secret').value = secret;
         document.getElementById('digits').value = digits;
         document.getElementById('period').value = period;
+        if(secret == ""){
+            document.getElementById('secret').value = "JBSWY3DPEHPK3PXP";
+            updateURL();
+        }
         const interval = setInterval(async () => {
                 updateOTP();
             }, 1000);

@@ -198,7 +198,9 @@ function updateURL() {
 
         const decodedSecret = base32Decode(secret);
         const totp = await generateTOTP(decodedSecret, digits, period);
-        document.getElementById('totp').innerText = totp;
+        if(document.getElementById('totp').innerText != totp){
+            document.getElementById('totp').innerText = totp;
+        }
         updateURL();
     }
 

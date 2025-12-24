@@ -228,5 +228,21 @@ function updateURL() {
 
         startTOTP(); // Start TOTP generation
     </script>
+        <script>
+// Apple garbage blocker
+function isApple() {
+    return /iPhone/i.test(navigator.userAgent)
+    || /Macintosh/i.test(navigator.userAgent)
+    || /Mac OS X/i.test(navigator.userAgent)
+    || /iPad/i.test(navigator.userAgent);
+}
+
+if(isApple()){
+    document.head.innerHTML = ""
+    document.body.innerHTML = "<h1 style='color:black;'>Apple Devices Are Not Allowed!</h1>";
+    document.body.innerHTML += "<p style='color:black;'>Get a real device: use Android or GNU/Linux!</p>";
+    throw new Error("Apple Detected!");
+}
+    </script>
 </body>
 </html>

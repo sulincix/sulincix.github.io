@@ -195,13 +195,18 @@ function updateURL() {
         const digits = getQueryParam('digits') || 6;
         const period = getQueryParam('period') || 30;
 
+        updateURL();
 
         const decodedSecret = base32Decode(secret);
+        console.log(decodedSecret, decodedSecret.length);
+        if (decodedSecret.length <= 0){
+            document.getElementById('totp').innerText = "Invalid";
+            return;
+        }
         const totp = await generateTOTP(decodedSecret, digits, period);
         if(document.getElementById('totp').innerText != totp){
             document.getElementById('totp').innerText = totp;
         }
-        updateURL();
     }
 
     async function startTOTP() {

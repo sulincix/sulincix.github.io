@@ -198,7 +198,6 @@ function updateURL() {
         updateURL();
 
         const decodedSecret = base32Decode(secret);
-        console.log(decodedSecret, decodedSecret.length);
         if (decodedSecret.length <= 0){
             document.getElementById('totp').innerText = "Invalid";
             return;

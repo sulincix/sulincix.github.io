@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>LCD FIX</title>
+    <style>
+      /* ensure body fills viewport so background covers whole screen */
+      html, body { height: 100%; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <script>
+      function getRandomColor() {
+          var letters = '0123456789ABCDEF';
+          var color = '#';
+          for (var i = 0; i < 6; i++) {
+              color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+      }
+      function update(){
+          document.body.style.background = getRandomColor();
+      }
+      setInterval(update, 1000/60);
+
+      // toggle fullscreen on body click; no extra elements added
+      document.body.addEventListener('click', async function () {
+        const docEl = document.documentElement;
+        if (!document.fullscreenElement) {
+          try {
+            await docEl.requestFullscreen();
+          } catch (err) {
+            console.error('Fullscreen request failed:', err);
+          }
+        } else {
+          try {
+            await document.exitFullscreen();
+          } catch (err) {
+            console.error('Exit fullscreen failed:', err);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+

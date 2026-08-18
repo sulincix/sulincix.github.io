@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Ali ❤ Pervin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      color: #5a2631;
+      background: linear-gradient(135deg, #fff1f4, #ffe0e8);
+    }
+
+    .card {
+      width: min(90%, 631px);
+      padding: 38px 25px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(150, 50, 80, 0.15);
+    }
+
+    h1 {
+      margin: 0 0 15px;
+      font-size: 2rem;
+      color: #c03958;
+    }
+
+    .message {
+      margin: 0;
+      font-size: 1.15rem;
+      line-height: 1.6;
+    }
+
+    #sure {
+      display: inline-block;
+      margin-top: 8px;
+      font-weight: bold;
+      color: #a52f4c;
+    }
+
+    .heart {
+      margin-top: 18px;
+      font-size: 1.5rem;
+      letter-spacing: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>Ali ❤ Pervin</h1>
+
+    <p class="message">
+      Ali ile Pervin
+      <span id="sure"></span>
+      süredir evlidir.
+    </p>
+
+    <div class="heart">❤ ❤ ❤</div>
+  </main>
+
+  <script>
+    const sure = document.getElementById("sure");
+
+    // Evlilik başlangıç tarihi
+    const start = new Date("2026-08-16T21:31:31");
+
+    function getElapsedTime(startDate, endDate) {
+      let years = endDate.getFullYear() - startDate.getFullYear();
+      let months = endDate.getMonth() - startDate.getMonth();
+
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+
+      // Yıl ve ay eklendikten sonraki tarih
+      const anniversary = new Date(startDate);
+      anniversary.setFullYear(startDate.getFullYear() + years);
+      anniversary.setMonth(startDate.getMonth() + months);
+
+      // Gün farkı
+      let difference = endDate - anniversary;
+
+      // Eğer ayın günü henüz gelmediyse ayı düzelt
+      if (difference < 0) {
+        months--;
+
+        if (months < 0) {
+          years--;
+          months = 11;
+        }
+
+        anniversary.setMonth(anniversary.getMonth() - 1);
+        difference = endDate - anniversary;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor(
+        (difference % (1000 * 60 * 60)) / (1000 * 60)
+      );
+      const seconds = Math.floor(
+        (difference % (1000 * 60)) / 1000
+      );
+
+      return `${years} yıl, ${months} ay, ${days} gün, `
+           + `${hours} saat, ${minutes} dakika, ${seconds} saniye`;
+    }
+
+    function updateCounter() {
+      const now = new Date();
+
+      sure.textContent = getElapsedTime(start, now);
+    }
+
+    updateCounter();
+    setInterval(updateCounter, 1000);
+  </script>
+</body>
+</html>

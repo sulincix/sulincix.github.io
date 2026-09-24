@@ -130,11 +130,11 @@ function updateURL() {
         url.searchParams.set('secret', secret);
         url.searchParams.set('digits', digits);
         url.searchParams.set('period', period);
-        window.history.replaceState({}, '', url);
+        window.history.replaceState({}, '', "#"+url.search.substr(1));
     }
 
     function getQueryParam(param) {
-        const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams("?"+window.location.toString().split("#")[1]);
         return urlParams.get(param);
     }
 

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML5 Web Sensors Live Monitor</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 { text-align: center; color: #fff; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 25px; }
+    .btn {
+      display: block; width: 100%; padding: 15px; background: #007aff; color: white;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: bold;
+      cursor: pointer; margin-bottom: 20px; transition: background 0.2s;
+    }
+    .btn:hover { background: #0056b3; }
+    .card {
+      background: #1e1e1e; border-radius: 10px; padding: 15px;
+      margin-bottom: 15px; border: 1px solid #333;
+    }
+    .card-title {
+      font-weight: bold; color: #007aff; border-bottom: 1px solid #333;
+      padding-bottom: 5px; margin-bottom: 10px; font-size: 1.1rem;
+    }
+    .data-row {
+      display: flex; justify-content: space-between; padding: 4px 0;
+      font-family: monospace; font-size: 0.95rem;
+    }
+    .label { color: #aaa; }
+    .val { color: #00ff66; font-weight: bold; }
+    .unsupported { color: #ff3b30 !important; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Web Sensors Dashboard</h1>
+  <p class="subtitle">Requires HTTPS or Localhost execution.</p>
+
+  <!-- iOS and modern browsers often require user gesture activation -->
+  <button class="btn" id="startBtn">Initialize & Request Sensor Permissions</button>
+
+  <!-- 1. Device Orientation API -->
+  <div class="card">
+    <div class="card-title">Device Orientation (Legacy / Broad Support)</div>
+    <div class="data-row"><span class="label">Alpha (Z-axis rotation):</span><span class="val" id="ori-alpha">-</span></div>
+    <div class="data-row"><span class="label">Beta (X-axis tilt):</span><span class="val" id="ori-beta">-</span></div>
+    <div class="data-row"><span class="label">Gamma (Y-axis tilt):</span><span class="val" id="ori-gamma">-</span></div>
+  </div>
+
+  <!-- 2. Device Motion API -->
+  <div class="card">
+    <div class="card-title">Device Motion (Accelerometer + Gyro)</div>
+    <div class="data-row"><span class="label">Accel X (with gravity):</span><span class="val" id="mot-gx">-</span></div>
+    <div class="data-row"><span class="label">Accel Y (with gravity):</span><span class="val" id="mot-gy">-</span></div>
+    <div class="data-row"><span class="label">Accel Z (with gravity):</span><span class="val" id="mot-gz">-</span></div>
+    <div class="data-row"><span class="label">Rotation Rate (Alpha):</span><span class="val" id="mot-ra">-</span></div>
+    <div class="data-row"><span class="label">Rotation Rate (Beta):</span><span class="val" id="mot-rb">-</span></div>
+    <div class="data-row"><span class="label">Rotation Rate (Gamma):</span><span class="val" id="mot-rg">-</span></div>
+  </div>
+
+  <!-- 3. Ambient Light API -->
+  <div class="card">
+    <div class="card-title">Ambient Light Sensor (Generic API)</div>
+    <div class="data-row"><span class="label">Illuminance (lux):</span><span class="val" id="light-lux">-</span></div>
+  </div>
+
+  <!-- 4. Accelerometer (Generic API) -->
+  <div class="card">
+    <div class="card-title">Linear Accelerometer (Generic API)</div>
+    <div class="data-row"><span class="label">Linear X (no gravity):</span><span class="val" id="accel-x">-</span></div>
+    <div class="data-row"><span class="label">Linear Y (no gravity):</span><span class="val" id="accel-y">-</span></div>
+    <div class="data-row"><span class="label">Linear Z (no gravity):</span><span class="val" id="accel-z">-</span></div>
+  </div>
+</div>
+
+<script>
+  const startBtn = document.getElementById('startBtn');
+
+  // Helper function to update elements safely
+  function setVal(id, value, isUnsupported = false) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = typeof value === 'number' ? value.toFixed(2) : value;
+      if (isUnsupported) el.classList.add('unsupported');
+    }
+  }
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.textContent = "Active / Permissions Requested";
+    startBtn.style.background = "#28a745";
+
+    // ==========================================
+    // 1 & 2. DEVICE ORIENTATION & MOTION
+    // ==========================================
+    
+    // Check for iOS 13+ permission requirements
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const oriPermission = await DeviceOrientationEvent.requestPermission();
+        if (oriPermission === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation);
+        } else {
+          setVal('ori-alpha', 'Permission Denied', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      try {
+        const motionPermission = await DeviceMotionEvent.requestPermission();
+        if (motionPermission === 'granted') {
+          window.addEventListener('devicemotion', handleMotion);
+        } else {
+          setVal('mot-gx', 'Permission Denied', true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      // Android / Desktop fallback standard event integration
+      window.addEventListener('deviceorientation', handleOrientation);
+      window.addEventListener('devicemotion', handleMotion);
+    }
+
+    // ==========================================
+    // 3. AMBIENT LIGHT SENSOR (Generic API)
+    // ==========================================
+    if ('AmbientLightSensor' in window) {
+      try {
+        const lightSensor = new AmbientLightSensor({ frequency: 10 });
+        lightSensor.addEventListener('reading', () => setVal('light-lux', lightSensor.illuminance));
+        lightSensor.addEventListener('error', (e) => setVal('light-lux', `Error: ${e.error.name}`, true));
+        lightSensor.start();
+      } catch (err) {
+        setVal('light-lux', 'Blocked / Error', true);
+      }
+    } else {
+      setVal('light-lux', 'Unsupported', true);
+    }
+
+    // ==========================================
+    // 4. LINEAR ACCELEROMETER (Generic API)
+    // ==========================================
+    if ('LinearAccelerationSensor' in window) {
+      try {
+        const linAccel = new LinearAccelerationSensor({ frequency: 30 });
+        linAccel.addEventListener('reading', () => {
+          setVal('accel-x', linAccel.x);
+          setVal('accel-y', linAccel.y);
+          setVal('accel-z', linAccel.z);
+        });
+        linAccel.addEventListener('error', (e) => setVal('accel-x', `Error`, true));
+        linAccel.start();
+      } catch (err) {
+        setVal('accel-x', 'Blocked', true);
+      }
+    } else {
+      setVal('accel-x', 'Unsupported', true);
+      setVal('accel-y', 'Unsupported', true);
+      setVal('accel-z', 'Unsupported', true);
+    }
+  });
+
+  // Handlers for device motion and orientation events
+  function handleOrientation(event) {
+    setVal('ori-alpha', event.alpha || 0);
+    setVal('ori-beta', event.beta || 0);
+    setVal('ori-gamma', event.gamma || 0);
+  }
+
+  function handleMotion(event) {
+    if (event.accelerationIncludingGravity) {
+      setVal('mot-gx', event.accelerationIncludingGravity.x || 0);
+      setVal('mot-gy', event.accelerationIncludingGravity.y || 0);
+      setVal('mot-gz', event.accelerationIncludingGravity.z || 0);
+    }
+    if (event.rotationRate) {
+      setVal('mot-ra', event.rotationRate.alpha || 0);
+      setVal('mot-rb', event.rotationRate.beta || 0);
+      setVal('mot-rg', event.rotationRate.gamma || 0);
+    }
+  }
+</script>
+
+</body>
+</html>

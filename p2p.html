@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC P2P Manual Signaling</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #121212;
+            color: #e0e0e0;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .box {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            box-sizing: border-box;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px;
+            resize: none;
+            margin-top: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>WebRTC Manual Signaling</h2>
+    
+    <div id="setupArea">
+        <div class="box">
+            <div class="flex-header">
+                <strong>Local Session Data (Base64)</strong>
+                <button id="copyBtn">Copy</button>
+            </div>
+            <textarea id="localSession" readonly placeholder="Generating..."></textarea>
+        </div>
+
+        <div class="box">
+            <strong>Remote Session Data (Base64)</strong>
+            <textarea id="remoteSession" placeholder="Paste remote token here..."></textarea>
+            <div style="text-align: right; margin-top: 10px;">
+                <button id="setRemote">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageArea" style="display:none" class="box">
+        <h3>P2P Data Channel</h3>
+        <p>Status: <span id="status" class="status">Disconnected</span></p>
+        
+        <div class="chat-group">
+            <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+            <button id="sendMessage" disabled>Send</button>
+        </div>
+        
+        <div class="chat-log" id="chatlog">
+            <div class="msg-system">System: Waiting for connection...</div>
+        </div>
+    </div>
+
+    <script>
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com' }] });
+        let dataChannel;
+
+        const setupArea = document.getElementById('setupArea');
+        const messageArea = document.getElementById('messageArea');
+        const localSession = document.getElementById('localSession');
+        const remoteSession = document.getElementById('remoteSession');
+        const statusText = document.getElementById('status');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendMessage');
+        const chatlog = document.getElementById('chatlog');
+        const copyBtn = document.getElementById('copyBtn');
+
+        const logMessage = (sender, msg) => {
+            const cls = sender === "You" ? "msg-me" : (sender === "System" ? "msg-system" : "msg-peer");
+            chatlog.innerHTML += `<div><strong class="${cls}">${sender}:</strong> ${msg}</div>`;
+            chatlog.scrollTop = chatlog.scrollHeight;
+        };
+
+        const sendMsg = () => {
+            if (dataChannel?.readyState === "open" && messageInput.value.trim()) {
+                dataChannel.send(messageInput.value);
+                logMessage("You", messageInput.value);
+                messageInput.value = "";
+            }
+        };
+
+        function setupChannel(channel) {
+            dataChannel = channel;
+            channel.onopen = () => {
+                statusText.innerText = "Connected";
+                statusText.classList.add("connected");
+                messageInput.disabled = sendBtn.disabled = false;
+                setupArea.style.display = "none";
+                messageArea.style.display = "block";
+                logMessage("System", "Connected.");
+            };
+            channel.onclose = () => {
+                statusText.innerText = "Disconnected";
+                statusText.classList.remove("connected");
+                messageInput.disabled = sendBtn.disabled = true;
+                setupArea.style.display = "block";
+                messageArea.style.display = "none";
+                logMessage("System", "Disconnected.");
+            };
+            channel.onmessage = e => logMessage("Peer", e.data);
+        }
+
+        async function autoInit() {
+            setupChannel(pc.createDataChannel("chatChannel"));
+            await pc.setLocalDescription(await pc.createOffer());
+        }
+        autoInit();
+        remoteSession.value = "";
+
+        pc.ondatachannel = e => setupChannel(e.channel);
+
+        pc.onicecandidate = () => {
+            if (pc.localDescription) {
+                const jsonStr = JSON.stringify(pc.localDescription);
+                localSession.value = btoa(unescape(encodeURIComponent(jsonStr)));
+            }
+        };
+
+        document.getElementById('setRemote').onclick = async () => {
+            if (!remoteSession.value.trim()) return;
+            try {
+                const decodedStr = decodeURIComponent(escape(atob(remoteSession.value.trim()))).trim();
+                const remoteDesc = JSON.parse(decodedStr);
+                await pc.setRemoteDescription(remoteDesc);
+                if (remoteDesc.type === "offer") {
+                    await pc.setLocalDescription(await pc.createAnswer());
+                }
+            } catch (err) {
+                alert("Invalid configuration data!");
+            }
+        };
+
+        copyBtn.onclick = () => {
+            if(!localSession.value) return;
+            navigator.clipboard.writeText(localSession.value);
+            copyBtn.innerText = "Copied!";
+            setTimeout(() => copyBtn.innerText = "Copy", 1500);
+        };
+
+        sendBtn.onclick = sendMsg;
+        messageInput.onkeydown = e => { if (e.key === "Enter") sendMsg(); };
+    </script>
+</body>
+</html>
+

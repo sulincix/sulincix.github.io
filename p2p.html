@@ -20,12 +20,6 @@
             margin-bottom: 15px;
             border-radius: 6px;
         }
-        .flex-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
         textarea {
             width: 100%;
             height: 80px;
@@ -37,28 +31,6 @@
             resize: none;
             margin-top: 5px;
         }
-        .chat-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .chat-group input {
-            flex: 1;
-            background: #2d2d2d;
-            border: 1px solid #444;
-            color: #fff;
-            padding: 8px;
-            border-radius: 4px;
-        }
-        .chat-log {
-            height: 200px;
-            overflow-y: auto;
-            background: #151515;
-            border: 1px solid #333;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-        }
         button {
             background: #007bff;
             color: white;
@@ -67,20 +39,6 @@
             cursor: pointer;
             border-radius: 4px;
         }
-        button:disabled {
-            background: #444;
-            cursor: not-allowed;
-        }
-        .status { color: #ff4d4d; font-weight: bold; }
-        .status.connected { color: #2ecc71; }
-        .msg-system { color: #aaa; font-style: italic; }
-        .msg-me { color: #3498db; }
-        .msg-peer { color: #e67e22; }
-        .role-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
     </style>
 </head>
 <body>
@@ -88,24 +46,19 @@
     <h2>WebRTC Manual Signaling</h2>
     
     <div id="setupArea">
-        <div class="role-buttons">
-            <button id="startOfferBtn">Oda Kur (Create Offer)</button>
-            <button id="startAnswerBtn" style="background:#27ae60;">Katıl (Join / Answer)</button>
-        </div>
-
-        <div class="box" id="localBox" style="display:none;">
+        <div class="box">
             <div class="flex-header">
-                <strong id="localTitle">Local Session Data (Base64)</strong>
+                <strong>Local Session Data (Base64)</strong>
                 <button id="copyBtn">Copy</button>
             </div>
-            <textarea id="localSession" readonly placeholder="Generating SDP with ICE candidates... Please wait."></textarea>
+            <textarea id="localSession" readonly placeholder="Generating..."></textarea>
         </div>
 
-        <div class="box" id="remoteBox" style="display:none;">
-            <strong id="remoteTitle">Remote Session Data (Base64)</strong>
+        <div class="box">
+            <strong>Remote Session Data (Base64)</strong>
             <textarea id="remoteSession" placeholder="Paste remote token here..."></textarea>
             <div style="text-align: right; margin-top: 10px;">
-                <button id="setRemote">Connect / Process Token</button>
+                <button id="setRemote">Connect</button>
             </div>
         </div>
     </div>
@@ -114,13 +67,13 @@
         <h3>P2P Data Channel</h3>
         <p>Status: <span id="status" class="status">Disconnected</span></p>
         
-        <div class="chat-log" id="chatlog">
-            <div class="msg-system">System: Waiting for connection...</div>
-        </div>
-
         <div class="chat-group">
             <input type="text" id="messageInput" placeholder="Type a message..." disabled>
             <button id="sendMessage" disabled>Send</button>
+        </div>
+        
+        <div class="chat-log" id="chatlog">
+            <div class="msg-system">System: Waiting for connection...</div>
         </div>
     </div>
 
@@ -137,11 +90,6 @@
         const sendBtn = document.getElementById('sendMessage');
         const chatlog = document.getElementById('chatlog');
         const copyBtn = document.getElementById('copyBtn');
-        
-        const startOfferBtn = document.getElementById('startOfferBtn');
-        const startAnswerBtn = document.getElementById('startAnswerBtn');
-        const localBox = document.getElementById('localBox');
-        const remoteBox = document.getElementById('remoteBox');
 
         const logMessage = (sender, msg) => {
             const cls = sender === "You" ? "msg-me" : (sender === "System" ? "msg-system" : "msg-peer");
@@ -165,7 +113,7 @@
                 messageInput.disabled = sendBtn.disabled = false;
                 setupArea.style.display = "none";
                 messageArea.style.display = "block";
-                logMessage("System", "Connected successfully!");
+                logMessage("System", "Connected.");
             };
             channel.onclose = () => {
                 statusText.innerText = "Disconnected";
@@ -178,55 +126,33 @@
             channel.onmessage = e => logMessage("Peer", e.data);
         }
 
-        // Rol 1: Oda Sahibi (Offer Oluşturucu)
-        startOfferBtn.onclick = async () => {
-            startOfferBtn.disabled = startAnswerBtn.disabled = true;
-            localBox.style.display = "block";
-            remoteBox.style.display = "block";
-            document.getElementById('remoteTitle').innerText = "Paste ANSWER Token Here";
-
+        async function autoInit() {
             setupChannel(pc.createDataChannel("chatChannel"));
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-        };
-
-        // Rol 2: Katılımcı (Answer Oluşturucu)
-        startAnswerBtn.onclick = () => {
-            startOfferBtn.disabled = startAnswerBtn.disabled = true;
-            remoteBox.style.display = "block";
-            document.getElementById('remoteTitle').innerText = "Paste OFFER Token First";
-        };
-
-        // ICE Toplama işlemi bittiğinde (null geldiğinde) token üretilir
-        pc.onicecandidate = (event) => {
-            if (event.candidate === null) {
-                const jsonStr = JSON.stringify(pc.localDescription);
-                localSession.value = btoa(unescape(encodeURIComponent(jsonStr)));
-                logMessage("System", "Token generation complete. Copy and send to your peer.");
-            }
-        };
+            await pc.setLocalDescription(await pc.createOffer());
+        }
+        autoInit();
+        remoteSession.value = "";
 
         pc.ondatachannel = e => setupChannel(e.channel);
 
+        pc.onicecandidate = () => {
+            if (pc.localDescription) {
+                const jsonStr = JSON.stringify(pc.localDescription);
+                localSession.value = btoa(unescape(encodeURIComponent(jsonStr)));
+            }
+        };
+
         document.getElementById('setRemote').onclick = async () => {
-            const token = remoteSession.value.trim();
-            if (!token) return;
+            if (!remoteSession.value.trim()) return;
             try {
-                const decodedStr = decodeURIComponent(escape(atob(token))).trim();
+                const decodedStr = decodeURIComponent(escape(atob(remoteSession.value.trim()))).trim();
                 const remoteDesc = JSON.parse(decodedStr);
-                
                 await pc.setRemoteDescription(remoteDesc);
-                
                 if (remoteDesc.type === "offer") {
-                    // Katılımcı teklifi aldıktan sonra kendi yerel cevabını (Answer) üretir
-                    localBox.style.display = "block";
-                    document.getElementById('localTitle').innerText = "Your ANSWER Token (Send this back)";
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
+                    await pc.setLocalDescription(await pc.createAnswer());
                 }
             } catch (err) {
-                alert("Invalid configuration data! Make sure you copied the entire token.");
-                console.error(err);
+                alert("Invalid configuration data!");
             }
         };
 
@@ -242,3 +168,4 @@
     </script>
 </body>
 </html>
+
